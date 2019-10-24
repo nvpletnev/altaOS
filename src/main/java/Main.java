@@ -1,10 +1,12 @@
-import com.intelligt.modbus.jlibmodbus.ModbusMaster;
-import com.intelligt.modbus.jlibmodbus.ModbusMasterFactory;
-import com.intelligt.modbus.jlibmodbus.serial.SerialParameters;
-import jssc.SerialPortList;
-
 public class Main {
     static public void main(String[] arg) {
+        //todo Создать класс Connection (с инициализацией com-port)
+        // Описать класс PLSM (добавить поля методы)
+        // Добавить PLSM в классы оборудования В конструкторах классов оборудования создать нужный PLSM
+        // Объект конструировать c slaveID и регистром МКСН (номер output)
 
+        // При инициализации программы сначала создаются коннекты по com-портам
+        // По каждому com-порту опрашиваются все МКСН, получаем slaveId всех найденных МКСН
+        //
     }
 }
