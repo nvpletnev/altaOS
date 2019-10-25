@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 //Модуль коммутации силовой нагрузки
-//todo создать карту регистров
 public class Plsm {
 
     private final int slaveId;

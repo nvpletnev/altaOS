@@ -19,7 +19,7 @@ public class ModBusConnection {
         serialParameters.setDataBits(8);
         serialParameters.setStopBits(1);
         this.master = ModbusMasterFactory.createModbusMasterRTU(serialParameters);
-//        master.setResponseTimeout();
+        master.setResponseTimeout(1000);
     }
 
     public ModbusMaster getMaster() {
