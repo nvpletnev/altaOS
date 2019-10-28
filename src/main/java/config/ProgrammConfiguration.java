@@ -1,21 +1,16 @@
 package config;
 
-import com.intelligt.modbus.jlibmodbus.ModbusMaster;
-import com.intelligt.modbus.jlibmodbus.data.ModbusHoldingRegisters;
-import com.intelligt.modbus.jlibmodbus.exception.ModbusIOException;
-import com.intelligt.modbus.jlibmodbus.exception.ModbusNumberException;
-import com.intelligt.modbus.jlibmodbus.exception.ModbusProtocolException;
-import com.intelligt.modbus.jlibmodbus.msg.request.ReadHoldingRegistersRequest;
-import com.intelligt.modbus.jlibmodbus.msg.response.ReadHoldingRegistersResponse;
-import com.intelligt.modbus.jlibmodbus.serial.SerialPortException;
-import connection.ModBusConnection;
-import exception.ComPortsNotFound;
+import connection.SerialModbusConnection;
+import equipment.plsm.Plsm;
 import jssc.SerialPortList;
+import net.wimpi.modbus.facade.ModbusSerialMaster;
+import net.wimpi.modbus.procimg.Register;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * This class initializes the configuration file.
@@ -24,55 +19,81 @@ import java.util.Properties;
  * File slaves.properties contains all devices
  **/
 
+//singleton
 public class ProgrammConfiguration {
+    private static ProgrammConfiguration configuration = new ProgrammConfiguration();
+    //plsmMap key - slaveId
+    private final Map<Integer, Plsm> plsmMap;
+    private final Properties properties;
+    private final String[] ports;
+    private SerialModbusConnection modbusConnection;
+    private String port;
 
-    private final Properties properties = new Properties();
-    private OutputStream outputStream = new FileOutputStream("slaves.properties");
-    private ModBusConnection connection;
-    private String[] ports = SerialPortList.getPortNames();
-    private ModbusHoldingRegisters registers;
+    private ProgrammConfiguration() {
+        this.plsmMap = new HashMap<>();
+        this.properties = new Properties();
+        this.ports = SerialPortList.getPortNames();
+    }
 
-    public ProgrammConfiguration() throws IOException, ComPortsNotFound, SerialPortException, ModbusIOException, ModbusNumberException, ModbusProtocolException {
+    public static ProgrammConfiguration getInstance() {
+        return configuration;
+    }
 
-        if (ports.length == 0) throw new ComPortsNotFound("Com-port not found!");
+    public void configure() {
+        //make slaves.properties
+        try (OutputStream outputStream = new FileOutputStream("slaves.properties")) {
+            for (String port : ports) {
+                this.port = port;
+                modbusConnection = new SerialModbusConnection(port);
+                ModbusSerialMaster master = modbusConnection.getMaster();
+                master.connect();
+                for (int i = 0; i < 248; i++) {
+                    Register[] register = master.readMultipleRegisters(i, 0, 32);
+                    // register 10 - slaveId, register 31 - device type
+                    properties.setProperty(String.valueOf(register[10].getValue()), String.valueOf(register[31].getValue()));
+                    //Thread.sleep(20);
+                }
+                master.disconnect();
+            }
+            // write properties to file
+            properties.store(outputStream, null);
 
-        //todo Опросить все устройства в сети modbus на каждом порту
-
-        for (String port : ports) {
-            //open connection
-            connection = new ModBusConnection(port);
-            ModbusMaster master = connection.getMaster();
-            master.connect();
-
-            registers = getRegisters(port, 1);
-            properties.setProperty("SlaveId", String.valueOf(registers.get(10)));
-
-            //close connection
-            connection.getMaster().disconnect();
+        } catch (FileNotFoundException e) {
+            System.out.println("File slaves.properties not found in resources");
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.out.printf("Cannot open connection to %s", port);
         }
-        properties.store(outputStream, null);
-        outputStream.close();
     }
 
-    public Properties getProperties() {
-        return properties;
+    public boolean createPlsmMap() {
+        try (InputStream inputStream = new FileInputStream("slaves.properties")) {
+            properties.load(inputStream);
+            if (properties.isEmpty()) {
+                return false;
+            } else {
+                for (String port : ports) {
+                    Set<String> keys = properties.stringPropertyNames();
+                    keys.forEach(k -> {
+                        try {
+                            plsmMap.put(Integer.valueOf(k), new Plsm(port, Integer.parseInt(k)));
+                        } catch (IOException e) {
+                            System.out.println("Cannot open port");
+                            e.printStackTrace();
+                        }
+                    });
+                }
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("File slaves.properties not found in resources");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return true;
     }
 
-    private ModbusHoldingRegisters getRegisters(String port, int slaveID) throws SerialPortException, ModbusIOException, ModbusNumberException, ModbusProtocolException {
-
-        //make request to 0-15 registers
-        ReadHoldingRegistersRequest request = new ReadHoldingRegistersRequest();
-        request.setServerAddress(slaveID);
-        request.setStartAddress(0);
-        request.setQuantity(16);
-
-        //make response
-        connection.getMaster().processRequest(request);
-        ReadHoldingRegistersResponse response = (ReadHoldingRegistersResponse) request.getResponse();
-
-        //get registers
-        ModbusHoldingRegisters registers = response.getHoldingRegisters();
-
-        return registers;
+    public Map<Integer, Plsm> getPlsmMap() {
+        return plsmMap;
     }
 }

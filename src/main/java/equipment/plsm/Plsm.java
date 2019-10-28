@@ -1,5 +1,11 @@
 package equipment.plsm;
 
+import connection.SerialModbusConnection;
+import net.wimpi.modbus.facade.ModbusSerialMaster;
+import net.wimpi.modbus.procimg.Register;
+import net.wimpi.modbus.procimg.SimpleRegister;
+
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -7,7 +13,8 @@ import java.util.Map;
 public class Plsm {
 
     private final int slaveId;
-
+    private final String port;
+    private final SerialModbusConnection connection;
     private final Map<String, Integer> registers = new HashMap<>() {{
         put("channel1", 0);
         put("channel2", 1);
@@ -27,8 +34,14 @@ public class Plsm {
         put("error", 15);
     }};
 
-    public Plsm(int slaveId) {
+    public Plsm(String port, int slaveId) throws IOException {
+        this.port = port;
         this.slaveId = slaveId;
+        this.connection = new SerialModbusConnection(port);
+    }
+
+    public String getPort() {
+        return port;
     }
 
     public Map<String, Integer> getRegisters() {
@@ -39,38 +52,20 @@ public class Plsm {
         return slaveId;
     }
 
-//    @Override
-//    public int readSingleRegister(int slaveID, int register) throws ModbusNumberException, ModbusProtocolException, ModbusIOException {
-//        int[] valueFromRegisters = connection.getMaster().readHoldingRegisters(slaveID, register, 1);
-//        return valueFromRegisters[0];
-//    }
-//
-//    @Override
-//    public int[] readMultiplyRegisters(int slaveID, int... registers) throws ModbusNumberException, ModbusProtocolException, ModbusIOException {
-//        int[] valueFromRegisters = new int[registers.length];
-//        for (int i = 0; i < registers.length; i++) {
-//            valueFromRegisters[i] = readSingleRegister(slaveID, i);
-//        }
-//        return valueFromRegisters;
-//    }
-//
-//
-//    @Override
-//    public boolean writeSingleRegister(int slaveID, int register, int value) {
-//        try {
-//            connection.getMaster().writeSingleRegister(slaveID, register, value);
-//            return true;
-//        } catch (ModbusProtocolException | ModbusIOException | ModbusNumberException e) {
-//            return false;
-//        }
-//    }
-//
-//    @Override
-//    public boolean writeMultiplyRegisters(int slaveID, int[] register, int[] value) {
-//        if (register.length != value.length) return false;
-//        for (int i = 0; i < register.length; i++) {
-//            writeSingleRegister(slaveID, register[i], value[i]);
-//        }
-//        return true;
-//    }
+    public int readValueFromRegister(int register) throws Exception {
+        ModbusSerialMaster master = connection.getMaster();
+        master.connect();
+        Register[] registers = master.readMultipleRegisters(slaveId, register, 1);
+        master.disconnect();
+        return registers[0].getValue();
+    }
+
+    public void writeValueFromRegister(int reg, int value) throws Exception {
+        ModbusSerialMaster master = connection.getMaster();
+        master.connect();
+        Register register = new SimpleRegister();
+        register.setValue(value);
+        master.writeSingleRegister(slaveId, reg, register);
+        master.disconnect();
+    }
 }
