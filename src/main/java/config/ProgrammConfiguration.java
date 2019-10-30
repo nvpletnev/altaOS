@@ -81,6 +81,8 @@ public class ProgrammConfiguration {
                         } catch (IOException e) {
                             System.out.println("Cannot open port");
                             e.printStackTrace();
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
                     });
                 }

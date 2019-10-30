@@ -11,11 +11,12 @@ import java.util.Map;
 
 //Модуль коммутации силовой нагрузки
 public class Plsm {
+    private final static int COUNT_REGISTERS = 16;
 
     private final int slaveId;
     private final String port;
     private final SerialModbusConnection connection;
-    private final Map<String, Integer> registers = new HashMap<>() {{
+    private final Map<String, Integer> registersMap = new HashMap<>() {{
         put("channel1", 0);
         put("channel2", 1);
         put("channel3", 2);
@@ -33,39 +34,53 @@ public class Plsm {
         put("totalPowerConsumption", 14);
         put("error", 15);
     }};
+    private Register[] registers;
 
-    public Plsm(String port, int slaveId) throws IOException {
+    public Plsm(String port, int slaveId) throws Exception {
         this.port = port;
         this.slaveId = slaveId;
         this.connection = new SerialModbusConnection(port);
+        this.registers = readMultipleValues(slaveId, 0, COUNT_REGISTERS);
+    }
+
+    public Register[] getRegisters() {
+        return registers;
+    }
+
+    public void updateRegisters() throws Exception {
+        registers = readMultipleValues(slaveId, 0, COUNT_REGISTERS);
+    }
+
+    public SerialModbusConnection getConnection() {
+        return connection;
     }
 
     public String getPort() {
         return port;
     }
 
-    public Map<String, Integer> getRegisters() {
-        return registers;
+    public Map<String, Integer> getRegistersMap() {
+        return registersMap;
     }
 
     public int getSlaveId() {
         return slaveId;
     }
 
-    public int readValueFromRegister(int register) throws Exception {
-        ModbusSerialMaster master = connection.getMaster();
-        master.connect();
-        Register[] registers = master.readMultipleRegisters(slaveId, register, 1);
-        master.disconnect();
-        return registers[0].getValue();
-    }
-
-    public void writeValueFromRegister(int reg, int value) throws Exception {
+    public void writeValue(int reg, int value) throws Exception {
         ModbusSerialMaster master = connection.getMaster();
         master.connect();
         Register register = new SimpleRegister();
         register.setValue(value);
         master.writeSingleRegister(slaveId, reg, register);
         master.disconnect();
+    }
+
+    private Register[] readMultipleValues(int slaveId, int offset, int count) throws Exception {
+        ModbusSerialMaster master = connection.getMaster();
+        master.connect();
+        this.registers = master.readMultipleRegisters(slaveId, offset, count);
+        master.disconnect();
+        return this.registers;
     }
 }

@@ -1,6 +1,7 @@
 package equipment;
 
 import equipment.plsm.Plsm;
+import net.wimpi.modbus.procimg.Register;
 
 public abstract class Equipment {
 
@@ -10,35 +11,30 @@ public abstract class Equipment {
     private boolean isWork;
     private int error;
     private int currentConsumption;
-    private int setpointCurrentConsumption;
+    private int currentLimit;
 
     public Equipment(Plsm plsm, String channel) throws Exception {
+        Register[] registers = plsm.getRegisters();
         this.plsm = plsm;
-        this.channel = plsm.getRegisters().get(channel);
         this.slaveId = plsm.getSlaveId();
-        this.error = plsm.readValueFromRegister(plsm.getRegisters().get("error"));
+        this.channel = plsm.getRegistersMap().get(channel);
+        this.error = registers[plsm.getRegistersMap().get("error")].getValue();
         switch (this.channel) {
             case 0:
-                this.currentConsumption = plsm.readValueFromRegister(plsm.getRegisters().get("channelCurrentConsumption1"));
-                this.setpointCurrentConsumption = plsm.readValueFromRegister(plsm.getRegisters().get("currentConsumptionLimitChannel1"));
-                if (plsm.readValueFromRegister(plsm.getRegisters().get("channel0")) == 0 ||
-                        plsm.readValueFromRegister(plsm.getRegisters().get("channel0")) == 3) {
-                    this.isWork = false;
-                } else this.isWork = true;
+                int ch0 = registers[plsm.getRegistersMap().get("channel0")].getValue();
+                this.currentConsumption = registers[plsm.getRegistersMap().get("channelCurrentConsumption1")].getValue();
+                this.currentLimit = registers[plsm.getRegistersMap().get("currentConsumptionLimitChannel1")].getValue();
+                this.isWork = ch0 != 0 && ch0 != 3;
                 break;
             case 1:
-                this.currentConsumption = plsm.readValueFromRegister(plsm.getRegisters().get("channelCurrentConsumption2"));
-                this.setpointCurrentConsumption = plsm.readValueFromRegister(plsm.getRegisters().get("currentConsumptionLimitChannel2"));
-                if (plsm.readValueFromRegister(plsm.getRegisters().get("channel1")) > 0) {
-                    this.isWork = true;
-                } else this.isWork = false;
+                this.currentConsumption = registers[plsm.getRegistersMap().get("channelCurrentConsumption2")].getValue();
+                this.currentLimit = registers[plsm.getRegistersMap().get("currentConsumptionLimitChannel2")].getValue();
+                this.isWork = registers[plsm.getRegistersMap().get("channel1")].getValue() > 0;
                 break;
             case 2:
-                this.currentConsumption = plsm.readValueFromRegister(plsm.getRegisters().get("channelCurrentConsumption3"));
-                this.setpointCurrentConsumption = plsm.readValueFromRegister(plsm.getRegisters().get("currentConsumptionLimitChannel3"));
-                if (plsm.readValueFromRegister(plsm.getRegisters().get("channel2")) > 0) {
-                    this.isWork = true;
-                } else this.isWork = false;
+                this.currentConsumption = registers[plsm.getRegistersMap().get("channelCurrentConsumption3")].getValue();
+                this.currentLimit = registers[plsm.getRegistersMap().get("currentConsumptionLimitChannel3")].getValue();
+                this.isWork = registers[plsm.getRegistersMap().get("channel2")].getValue() > 0;
                 break;
         }
     }
@@ -59,19 +55,35 @@ public abstract class Equipment {
         return channel;
     }
 
-    public boolean isWork() {
+    public boolean isWork() throws Exception {
+        this.plsm.updateRegisters();
+        Register[] registers = this.plsm.getRegisters();
+        Register register = registers[channel];
+        this.isWork = register.getValue() == 0 || (register.getValue() == 3);
         return isWork;
     }
 
-    public int getError() {
+    public int getError() throws Exception {
+        this.plsm.updateRegisters();
+        Register[] registers = this.plsm.getRegisters();
+        Register register = registers[plsm.getRegistersMap().get("error")];
+        this.error = register.getValue();
         return error;
     }
 
-    public int getCurrentConsumption() {
+    public int getCurrentConsumption() throws Exception {
+        this.plsm.updateRegisters();
+        Register[] registers = this.plsm.getRegisters();
+        Register register = registers[channel + 3];
+        currentConsumption = register.getValue();
         return currentConsumption;
     }
 
-    public int getSetpointCurrentConsumption() {
-        return setpointCurrentConsumption;
+    public int getCurrentLimit() throws Exception {
+        this.plsm.updateRegisters();
+        Register[] registers = this.plsm.getRegisters();
+        Register register = registers[channel + 7];
+        currentLimit = register.getValue();
+        return currentLimit;
     }
 }
