@@ -39,6 +39,7 @@ public class ProgrammConfiguration {
         return configuration;
     }
 
+    //todo
     public void configure() {
         //make slaves.properties
         try (OutputStream outputStream = new FileOutputStream("slaves.properties")) {

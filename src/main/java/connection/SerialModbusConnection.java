@@ -15,10 +15,17 @@ public class SerialModbusConnection {
 
     public SerialModbusConnection(final String port) throws IOException {
         this.port = port;
-        this.properties = getProperties();
+        this.properties = new Properties();
+        FileInputStream inputStream = new FileInputStream("serial.properties");
+        properties.load(inputStream);
+        inputStream.close();
         serialParameters = new SerialParameters(properties, null);
         serialParameters.setPortName(port);
         master = new ModbusSerialMaster(serialParameters);
+    }
+
+    public String getPort() {
+        return port;
     }
 
     public ModbusSerialMaster getMaster() {
@@ -26,10 +33,6 @@ public class SerialModbusConnection {
     }
 
     private Properties getProperties() throws IOException {
-        Properties properties = new Properties();
-        FileInputStream inputStream = new FileInputStream("serial.properties");
-        properties.load(inputStream);
-        inputStream.close();
         return properties;
     }
 }

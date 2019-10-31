@@ -5,7 +5,6 @@ import net.wimpi.modbus.facade.ModbusSerialMaster;
 import net.wimpi.modbus.procimg.Register;
 import net.wimpi.modbus.procimg.SimpleRegister;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 

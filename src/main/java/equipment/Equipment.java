@@ -12,6 +12,8 @@ public abstract class Equipment {
     private int error;
     private int currentConsumption;
     private int currentLimit;
+    //todo uuid saves in plsm in 16,17 registers
+    private int uuid;
 
     public Equipment(Plsm plsm, String channel) throws Exception {
         Register[] registers = plsm.getRegisters();
@@ -22,19 +24,19 @@ public abstract class Equipment {
         switch (this.channel) {
             case 0:
                 int ch0 = registers[plsm.getRegistersMap().get("channel0")].getValue();
+                this.isWork = ch0 != 0 && ch0 != 3;
                 this.currentConsumption = registers[plsm.getRegistersMap().get("channelCurrentConsumption1")].getValue();
                 this.currentLimit = registers[plsm.getRegistersMap().get("currentConsumptionLimitChannel1")].getValue();
-                this.isWork = ch0 != 0 && ch0 != 3;
                 break;
             case 1:
+                this.isWork = registers[plsm.getRegistersMap().get("channel1")].getValue() > 0;
                 this.currentConsumption = registers[plsm.getRegistersMap().get("channelCurrentConsumption2")].getValue();
                 this.currentLimit = registers[plsm.getRegistersMap().get("currentConsumptionLimitChannel2")].getValue();
-                this.isWork = registers[plsm.getRegistersMap().get("channel1")].getValue() > 0;
                 break;
             case 2:
+                this.isWork = registers[plsm.getRegistersMap().get("channel2")].getValue() > 0;
                 this.currentConsumption = registers[plsm.getRegistersMap().get("channelCurrentConsumption3")].getValue();
                 this.currentLimit = registers[plsm.getRegistersMap().get("currentConsumptionLimitChannel3")].getValue();
-                this.isWork = registers[plsm.getRegistersMap().get("channel2")].getValue() > 0;
                 break;
         }
     }
